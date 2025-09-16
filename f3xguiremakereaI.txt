@@ -5871,11 +5871,19 @@ AddButton({
     end
 })
 AddButton({
-    Name = "John Doe",
+    Name = "Spawn Zombie",
     Callback = function()
         local ReplicatedStorage = game:GetService("ReplicatedStorage")
         local SilentRequest = ReplicatedStorage:WaitForChild("HDAdminHDClient").Signals.RequestCommandSilent
-        SilentRequest:InvokeServer(";gear me 95951330")
+        SilentRequest:InvokeServer(";insert 187789986")
+    end
+})
+AddButton({
+    Name = "Spawn Soldier",
+    Callback = function()
+        local ReplicatedStorage = game:GetService("ReplicatedStorage")
+        local SilentRequest = ReplicatedStorage:WaitForChild("HDAdminHDClient").Signals.RequestCommandSilent
+        SilentRequest:InvokeServer(";insert 187790284")
     end
 })
 
@@ -6428,6 +6436,26 @@ MusicAddButton({
         local SilentRequest = ReplicatedStorage:WaitForChild("HDAdminHDClient").Signals.RequestCommandSilent
         SilentRequest:InvokeServer(";music 92512466676196")
 SilentRequest:InvokeServer(";pitch 0.125")
+SilentRequest:InvokeServer(";volume inf")
+    end
+})
+MusicAddButton({
+    Name = "electro spook",
+    Callback = function()
+        local ReplicatedStorage = game:GetService("ReplicatedStorage")
+        local SilentRequest = ReplicatedStorage:WaitForChild("HDAdminHDClient").Signals.RequestCommandSilent
+        SilentRequest:InvokeServer(";music 71956674693421")
+SilentRequest:InvokeServer(";pitch 0.9")
+SilentRequest:InvokeServer(";volume inf")
+    end
+})
+MusicAddButton({
+    Name = "Rebzyyx",
+    Callback = function()
+        local ReplicatedStorage = game:GetService("ReplicatedStorage")
+        local SilentRequest = ReplicatedStorage:WaitForChild("HDAdminHDClient").Signals.RequestCommandSilent
+        SilentRequest:InvokeServer(";music 126202579497643")
+SilentRequest:InvokeServer(";pitch 0.123")
 SilentRequest:InvokeServer(";volume inf")
     end
 })
