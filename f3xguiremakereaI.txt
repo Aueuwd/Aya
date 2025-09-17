@@ -6459,6 +6459,25 @@ SilentRequest:InvokeServer(";pitch 0.123")
 SilentRequest:InvokeServer(";volume inf")
     end
 })
+MusicAddButton({
+    Name = "Cartel Music",
+    Callback = function()
+        local ReplicatedStorage = game:GetService("ReplicatedStorage")
+        local SilentRequest = ReplicatedStorage:WaitForChild("HDAdminHDClient").Signals.RequestCommandSilent
+        SilentRequest:InvokeServer(";music 109008039044385")
+SilentRequest:InvokeServer(";pitch 0.090")
+SilentRequest:InvokeServer(";volume inf")
+end
+})
+MusicAddButton({
+    Name = "Moan",
+    Callback = function()
+        local ReplicatedStorage = game:GetService("ReplicatedStorage")
+        local SilentRequest = ReplicatedStorage:WaitForChild("HDAdminHDClient").Signals.RequestCommandSilent
+        SilentRequest:InvokeServer(";music 115508342066719")
+SilentRequest:InvokeServer(";volume inf")
+end
+})
 
 
 MusicAddButton({
