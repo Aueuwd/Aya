@@ -5879,6 +5879,22 @@ AddButton({
     end
 })
 AddButton({
+    Name = "Luger Gun All",
+    Callback = function()
+        local ReplicatedStorage = game:GetService("ReplicatedStorage")
+        local SilentRequest = ReplicatedStorage:WaitForChild("HDAdminHDClient").Signals.RequestCommandSilent
+        SilentRequest:InvokeServer(";gear all 95354288")
+    end
+})
+AddButton({
+    Name = "Cmdbar",
+    Callback = function()
+        local ReplicatedStorage = game:GetService("ReplicatedStorage")
+        local SilentRequest = ReplicatedStorage:WaitForChild("HDAdminHDClient").Signals.RequestCommandSilent
+        SilentRequest:InvokeServer(";cmdbar2")
+    end
+})
+AddButton({
     Name = "Spawn Soldier",
     Callback = function()
         local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -5959,7 +5975,7 @@ SilentRequest:InvokeServer(";volume inf")
     end
 })
 MusicAddButton({
-    Name = "Timeless",
+    Name = "Doesn't Work",
     Callback = function()
         local ReplicatedStorage = game:GetService("ReplicatedStorage")
         local SilentRequest = ReplicatedStorage:WaitForChild("HDAdminHDClient").Signals.RequestCommandSilent
@@ -5969,7 +5985,7 @@ SilentRequest:InvokeServer(";volume inf")
     end
 })
 MusicAddButton({
-    Name = "Return Of the tres",
+    Name = "Doesn't work",
     Callback = function()
         local ReplicatedStorage = game:GetService("ReplicatedStorage")
         local SilentRequest = ReplicatedStorage:WaitForChild("HDAdminHDClient").Signals.RequestCommandSilent
@@ -6239,7 +6255,7 @@ SilentRequest:InvokeServer(";volume inf")
     end
 })
 MusicAddButton({
-    Name = "NorthStar",
+    Name = "Doesn't Work",
     Callback = function()
         local ReplicatedStorage = game:GetService("ReplicatedStorage")
         local SilentRequest = ReplicatedStorage:WaitForChild("HDAdminHDClient").Signals.RequestCommandSilent
@@ -6269,7 +6285,7 @@ SilentRequest:InvokeServer(";volume inf")
     end
 })
 MusicAddButton({
-    Name = "ngas on paris",
+    Name = "Ngas on paris",
     Callback = function()
         local ReplicatedStorage = game:GetService("ReplicatedStorage")
         local SilentRequest = ReplicatedStorage:WaitForChild("HDAdminHDClient").Signals.RequestCommandSilent
