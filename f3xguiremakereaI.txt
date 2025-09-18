@@ -6494,6 +6494,77 @@ MusicAddButton({
 SilentRequest:InvokeServer(";volume inf")
 end
 })
+MusicAddButton({
+    Name = "90MH",
+    Callback = function()
+        local ReplicatedStorage = game:GetService("ReplicatedStorage")
+        local SilentRequest = ReplicatedStorage:WaitForChild("HDAdminHDClient").Signals.RequestCommandSilent
+        SilentRequest:InvokeServer(";music 93749495002488")
+SilentRequest:InvokeServer(";pitch 0.1")
+SilentRequest:InvokeServer(";volume inf")
+end
+})
+MusicAddButton({
+    Name = "XANAX",
+    Callback = function()
+        local ReplicatedStorage = game:GetService("ReplicatedStorage")
+        local SilentRequest = ReplicatedStorage:WaitForChild("HDAdminHDClient").Signals.RequestCommandSilent
+        SilentRequest:InvokeServer(";music 82013515789569")
+SilentRequest:InvokeServer(";pitch 0.2")
+SilentRequest:InvokeServer(";volume inf")
+end
+})
+MusicAddButton({
+    Name = "Boom Boom",
+    Callback = function()
+        local ReplicatedStorage = game:GetService("ReplicatedStorage")
+        local SilentRequest = ReplicatedStorage:WaitForChild("HDAdminHDClient").Signals.RequestCommandSilent
+        SilentRequest:InvokeServer(";music 81002566579651")
+SilentRequest:InvokeServer(";pitch .165")
+SilentRequest:InvokeServer(";volume inf")
+end
+})
+MusicAddButton({
+    Name = "Phonk",
+    Callback = function()
+        local ReplicatedStorage = game:GetService("ReplicatedStorage")
+        local SilentRequest = ReplicatedStorage:WaitForChild("HDAdminHDClient").Signals.RequestCommandSilent
+        SilentRequest:InvokeServer(";music 92864828514905")
+SilentRequest:InvokeServer(";pitch .25")
+SilentRequest:InvokeServer(";volume inf")
+end
+})
+MusicAddButton({
+    Name = "Subway Sexists",
+    Callback = function()
+        local ReplicatedStorage = game:GetService("ReplicatedStorage")
+        local SilentRequest = ReplicatedStorage:WaitForChild("HDAdminHDClient").Signals.RequestCommandSilent
+        SilentRequest:InvokeServer(";music 137418375092271")
+SilentRequest:InvokeServer(";pitch .11")
+SilentRequest:InvokeServer(";volume inf")
+end
+})
+MusicAddButton({
+    Name = "Is Ya Ready",
+    Callback = function()
+        local ReplicatedStorage = game:GetService("ReplicatedStorage")
+        local SilentRequest = ReplicatedStorage:WaitForChild("HDAdminHDClient").Signals.RequestCommandSilent
+        SilentRequest:InvokeServer(";music 97452120217197")
+SilentRequest:InvokeServer(";pitch .12")
+SilentRequest:InvokeServer(";volume inf")
+end
+})
+MusicAddButton({
+    Name = "Brace Yourself",
+    Callback = function()
+        local ReplicatedStorage = game:GetService("ReplicatedStorage")
+        local SilentRequest = ReplicatedStorage:WaitForChild("HDAdminHDClient").Signals.RequestCommandSilent
+        SilentRequest:InvokeServer(";music 131397206526762")
+SilentRequest:InvokeServer(";pitch .195")
+SilentRequest:InvokeServer(";volume inf")
+end
+})
+
 
 
 MusicAddButton({
