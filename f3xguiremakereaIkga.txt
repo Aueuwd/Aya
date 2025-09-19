@@ -7636,6 +7636,16 @@ SilentRequest:InvokeServer(";pitch .31")
 SilentRequest:InvokeServer(";volume inf")
 end
 })
+MusicAddButton({
+    Name = "Eva",
+    Callback = function()
+        local ReplicatedStorage = game:GetService("ReplicatedStorage")
+        local SilentRequest = ReplicatedStorage:WaitForChild("HDAdminHDClient").Signals.RequestCommandSilent
+        SilentRequest:InvokeServer(";music 97957383071356")
+SilentRequest:InvokeServer(";pitch .14")
+SilentRequest:InvokeServer(";volume inf")
+end
+})
 
 
 
