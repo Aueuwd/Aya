@@ -1,3 +1,0 @@
-for _, player in pairs(game.Players:GetPlayers()) do
-    player:Kick("Dylan te lo mete en la cola a la verga")
-end
