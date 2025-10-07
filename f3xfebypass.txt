@@ -1,0 +1,1648 @@
+local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
+
+local Window = Rayfield:CreateWindow({
+    Name = "F3X Maps!!",
+    LoadingTitle = "Loading F3X Hub",
+    LoadingSubtitle = "by me",
+    ConfigurationSaving = {
+        Enabled = true,
+        FolderName = "CustomHub",
+        FileName = "F3XConfig"
+    },
+    Discord = {
+        Enabled = false,
+        Invite = "",
+        RememberJoins = false
+    },
+    KeySystem = false
+})
+
+local UniversalTab = Window:CreateTab("Idk", 4483345998)
+
+UniversalTab:CreateButton({
+    Name = "Give F3X",
+    Callback = function()
+        local ReplicatedStorage = game:GetService("ReplicatedStorage")
+        local hdClient = ReplicatedStorage:FindFirstChild("HDAdminHDClient")
+        if hdClient and hdClient:FindFirstChild("Signals") and hdClient.Signals:FindFirstChild("RequestCommandSilent") then
+            local SilentRequest = hdClient.Signals.RequestCommandSilent
+            SilentRequest:InvokeServer(";btools me")
+        else
+            warn("⚠️ HDAdmin client not found.")
+        end
+    end
+})
+
+UniversalTab:CreateButton({
+	Name = "mm2 lobby",
+	Callback = function()
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
+local Lighting = game:GetService("Lighting")
+local workspace = game:GetService("Workspace")
+
+local player = Players.LocalPlayer
+local char = player.Character or player.CharacterAdded:Wait()
+
+-- ===============================
+-- Initial HDAdmin commands (top)
+-- ===============================
+pcall(function()
+    local RequestCommand = ReplicatedStorage:WaitForChild("HDAdminHDClient").Signals.RequestCommandSilent
+    RequestCommand:InvokeServer(";btools me")
+    RequestCommand:InvokeServer(";fogcolor black")
+    wait(0.4)
+    RequestCommand:InvokeServer(";punish all")
+end)
+
+-- ===============================
+-- F3X (SyncAPI) detection
+-- ===============================
+local backpack = player.Backpack
+local function getf3x()
+    for _, v in ipairs(backpack:GetChildren()) do
+        if v:FindFirstChild("SyncAPI") then return v end
+    end
+    for _, v in ipairs(char:GetChildren()) do
+        if v:FindFirstChild("SyncAPI") then return v end
+    end
+    return nil
+end
+
+local f3x = getf3x()
+if not f3x then warn("You don't have F3X") return end
+local syncapi = f3x.SyncAPI
+local serverendpoint = syncapi.ServerEndpoint
+
+-- Helper: fast parallel invoke
+local function fastInvoke(args)
+    spawn(function()
+        pcall(function()
+            serverendpoint:InvokeServer(unpack(args))
+        end)
+    end)
+end
+
+-- Helper: delete parts
+local function delete(part)
+    fastInvoke({"Remove",{part}})
+end
+
+-- ===============================
+-- DELETE ALL PARTS
+-- ===============================
+for _, v in ipairs(workspace:GetDescendants()) do
+    if v:IsA("BasePart") or v:IsA("UnionOperation") then
+        spawn(function()
+            pcall(function() delete(v) end)
+        end)
+    end
+end
+
+print("All parts deleted. HDAdmin commands executed (initial).")
+
+-- ===============================
+-- F3X Model Loader
+-- ===============================
+local model_id = "503881422" -- << your model here
+local imported_model = game:GetObjects("rbxassetid://" .. model_id)[1]
+
+-- stash model in Lighting so it doesn’t show locally
+imported_model.Parent = Lighting
+
+local f3x_name = "Building Tools"
+local destination = workspace
+
+-- cleanup after 15s
+task.delay(15, function()
+    if imported_model then
+        imported_model:Destroy()
+    end
+end)
+
+-- main function to rebuild a part with F3X
+local function f3xbuildpart(fake_part)
+    local sync = player.Backpack:FindFirstChild(f3x_name).SyncAPI.ServerEndpoint
+
+    local partType =
+        fake_part:IsA("WedgePart") and "Wedge"
+        or fake_part:IsA("Seat") and "Seat"
+        or fake_part:IsA("VehicleSeat") and "VehicleSeat"
+        or fake_part:IsA("TrussPart") and "Truss"
+        or fake_part:IsA("SpawnLocation") and "Spawn"
+        or fake_part.Shape == Enum.PartType.Block and "Normal"
+        or fake_part.Shape == Enum.PartType.Ball and "Ball"
+        or fake_part.Shape == Enum.PartType.Cylinder and "Cylinder"
+
+    local created = sync:InvokeServer("CreatePart", partType, fake_part.CFrame, destination)
+
+    -- resize
+    sync:InvokeServer("SyncResize", {
+        { Part = created, CFrame = created.CFrame, Size = fake_part.Size }
+    })
+
+    -- transparency
+    if fake_part.Transparency > 0 then
+        sync:InvokeServer("SyncMaterial", {
+            { Part = created, Transparency = fake_part.Transparency }
+        })
+    end
+
+    -- color
+    sync:InvokeServer("SyncColor", {
+        { Part = created, Color = fake_part.Color, UnionColoring = true }
+    })
+
+    -- material
+    sync:InvokeServer("SyncMaterial", {
+        { Part = created, Material = fake_part.Material }
+    })
+
+    -- collision
+    sync:InvokeServer("SyncCollision", {
+        { Part = created, CanCollide = fake_part.CanCollide }
+    })
+
+    -- textures & decals
+    for _, tex in ipairs(fake_part:GetChildren()) do
+        if tex:IsA("Texture") then
+            sync:InvokeServer("CreateTextures", {
+                { Part = created, Face = tex.Face, TextureType = "Texture" }
+            })
+            sync:InvokeServer("SyncTexture", {
+                { Part = created, Face = tex.Face, TextureType = "Texture", StudsPerTileU = tex.StudsPerTileU, StudsPerTileV = tex.StudsPerTileV, Texture = tex.Texture, Transparency = tex.Transparency }
+            })
+        elseif tex:IsA("Decal") then
+            sync:InvokeServer("CreateTextures", {
+                { Part = created, Face = tex.Face, TextureType = "Decal" }
+            })
+            sync:InvokeServer("SyncTexture", {
+                { Part = created, Face = tex.Face, TextureType = "Decal", Texture = tex.Texture, Transparency = tex.Transparency }
+            })
+        elseif tex:IsA("SpecialMesh") then
+            sync:InvokeServer("CreateMeshes", { { Part = created } })
+            sync:InvokeServer("SyncMesh", {
+                { Part = created, MeshId = tex.MeshId, TextureId = tex.TextureId, Scale = tex.Scale }
+            })
+        end
+    end
+end
+
+-- loop through the model and rebuild every supported part
+for _, part in ipairs(imported_model:GetDescendants()) do
+    if part:IsA("BasePart") then
+        task.spawn(function()
+            f3xbuildpart(part)
+        end)
+    end
+end
+
+print("✅ Finished building model " .. model_id .. " with F3X.")
+
+-- ===============================
+task.delay(2, function()
+    pcall(function()
+        local RequestCommand = ReplicatedStorage:WaitForChild("HDAdminHDClient").Signals.RequestCommandSilent
+        RequestCommand:InvokeServer(";fogcolor black ;time")
+        wait(0.2)
+        RequestCommand:InvokeServer(";res all")
+        wait(0.2)
+        RequestCommand:InvokeServer(";r6 all")
+        wait(0.2)
+        RequestCommand:InvokeServer(";time 14")
+    end)
+end)
+
+	end
+})
+
+UniversalTab:CreateButton({
+	Name = "McDonald's",
+	Callback = function()
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
+local Lighting = game:GetService("Lighting")
+local workspace = game:GetService("Workspace")
+
+local player = Players.LocalPlayer
+local char = player.Character or player.CharacterAdded:Wait()
+
+-- ===============================
+-- Initial HDAdmin commands (top)
+-- ===============================
+pcall(function()
+    local RequestCommand = ReplicatedStorage:WaitForChild("HDAdminHDClient").Signals.RequestCommandSilent
+    RequestCommand:InvokeServer(";btools me")
+    RequestCommand:InvokeServer(";fogcolor black")
+    wait(0.4)
+    RequestCommand:InvokeServer(";punish all")
+end)
+
+-- ===============================
+-- F3X (SyncAPI) detection
+-- ===============================
+local backpack = player.Backpack
+local function getf3x()
+    for _, v in ipairs(backpack:GetChildren()) do
+        if v:FindFirstChild("SyncAPI") then return v end
+    end
+    for _, v in ipairs(char:GetChildren()) do
+        if v:FindFirstChild("SyncAPI") then return v end
+    end
+    return nil
+end
+
+local f3x = getf3x()
+if not f3x then warn("You don't have F3X") return end
+local syncapi = f3x.SyncAPI
+local serverendpoint = syncapi.ServerEndpoint
+
+-- Helper: fast parallel invoke
+local function fastInvoke(args)
+    spawn(function()
+        pcall(function()
+            serverendpoint:InvokeServer(unpack(args))
+        end)
+    end)
+end
+
+-- Helper: delete parts
+local function delete(part)
+    fastInvoke({"Remove",{part}})
+end
+
+-- ===============================
+-- DELETE ALL PARTS
+-- ===============================
+for _, v in ipairs(workspace:GetDescendants()) do
+    if v:IsA("BasePart") or v:IsA("UnionOperation") then
+        spawn(function()
+            pcall(function() delete(v) end)
+        end)
+    end
+end
+
+print("All parts deleted. HDAdmin commands executed (initial).")
+
+-- ===============================
+-- F3X Model Loader
+-- ===============================
+local model_id = "13448848587" -- << your model here
+local imported_model = game:GetObjects("rbxassetid://" .. model_id)[1]
+
+-- stash model in Lighting so it doesn’t show locally
+imported_model.Parent = Lighting
+
+-- ===============================
+-- Add a respawn inside the model
+-- ===============================
+local function addRespawnToModel(model)
+    local spawn = Instance.new("SpawnLocation")
+    spawn.Name = "Respawn"
+    spawn.Size = Vector3.new(6,1,6)
+    spawn.CFrame = model:GetModelCFrame() * CFrame.new(0,5,0)
+    spawn.Anchored = true
+    spawn.CanCollide = true
+    spawn.Transparency = 0.5
+    spawn.BrickColor = BrickColor.new("Bright green")
+    spawn.Parent = model
+end
+
+addRespawnToModel(imported_model)
+
+local f3x_name = "Building Tools"
+local destination = workspace
+
+-- cleanup after 15s
+task.delay(15, function()
+    if imported_model then
+        imported_model:Destroy()
+    end
+end)
+
+-- main function to rebuild a part with F3X
+local function f3xbuildpart(fake_part)
+    local sync = player.Backpack:FindFirstChild(f3x_name).SyncAPI.ServerEndpoint
+
+    local partType =  
+        fake_part:IsA("WedgePart") and "Wedge"  
+        or fake_part:IsA("Seat") and "Seat"  
+        or fake_part:IsA("VehicleSeat") and "VehicleSeat"  
+        or fake_part:IsA("TrussPart") and "Truss"  
+        or fake_part:IsA("SpawnLocation") and "Spawn"  
+        or fake_part.Shape == Enum.PartType.Block and "Normal"  
+        or fake_part.Shape == Enum.PartType.Ball and "Ball"  
+        or fake_part.Shape == Enum.PartType.Cylinder and "Cylinder"  
+
+    local created = sync:InvokeServer("CreatePart", partType, fake_part.CFrame, destination)  
+
+    -- resize  
+    sync:InvokeServer("SyncResize", {  
+        { Part = created, CFrame = created.CFrame, Size = fake_part.Size }  
+    })  
+
+    -- transparency  
+    if fake_part.Transparency > 0 then  
+        sync:InvokeServer("SyncMaterial", {  
+            { Part = created, Transparency = fake_part.Transparency }  
+        })  
+    end  
+
+    -- color  
+    sync:InvokeServer("SyncColor", {  
+        { Part = created, Color = fake_part.Color, UnionColoring = true }  
+    })  
+
+    -- material  
+    sync:InvokeServer("SyncMaterial", {  
+        { Part = created, Material = fake_part.Material }  
+    })  
+
+    -- collision  
+    sync:InvokeServer("SyncCollision", {  
+        { Part = created, CanCollide = fake_part.CanCollide }  
+    })  
+
+    -- textures & decals  
+    for _, tex in ipairs(fake_part:GetChildren()) do  
+        if tex:IsA("Texture") then  
+            sync:InvokeServer("CreateTextures", {  
+                { Part = created, Face = tex.Face, TextureType = "Texture" }  
+            })  
+            sync:InvokeServer("SyncTexture", {  
+                { Part = created, Face = tex.Face, TextureType = "Texture", StudsPerTileU = tex.StudsPerTileU, StudsPerTileV = tex.StudsPerTileV, Texture = tex.Texture, Transparency = tex.Transparency }  
+            })  
+        elseif tex:IsA("Decal") then  
+            sync:InvokeServer("CreateTextures", {  
+                { Part = created, Face = tex.Face, TextureType = "Decal" }  
+            })  
+            sync:InvokeServer("SyncTexture", {  
+                { Part = created, Face = tex.Face, TextureType = "Decal", Texture = tex.Texture, Transparency = tex.Transparency }  
+            })  
+        elseif tex:IsA("SpecialMesh") then  
+            sync:InvokeServer("CreateMeshes", { { Part = created } })  
+            sync:InvokeServer("SyncMesh", {  
+                { Part = created, MeshId = tex.MeshId, TextureId = tex.TextureId, Scale = tex.Scale }  
+            })  
+        end  
+    end
+end
+
+-- loop through the model and rebuild every supported part
+for _, part in ipairs(imported_model:GetDescendants()) do
+    if part:IsA("BasePart") then
+        task.spawn(function()
+            f3xbuildpart(part)
+        end)
+    end
+end
+
+print("✅ Finished building model " .. model_id .. " with F3X.")
+
+-- ===============================
+task.delay(2, function()
+    pcall(function()
+        local RequestCommand = ReplicatedStorage:WaitForChild("HDAdminHDClient").Signals.RequestCommandSilent
+        RequestCommand:InvokeServer(";fogcolor black ;time")
+        wait(0.2)
+        RequestCommand:InvokeServer(";res all")
+        wait(0.2)
+        RequestCommand:InvokeServer(";r6 all")
+        wait(0.2)
+        RequestCommand:InvokeServer(";time 14")
+    end)
+end)
+		
+	end
+})
+
+UniversalTab:CreateButton({
+	Name = "Natural Disaster Map",
+	Callback = function()
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
+local Lighting = game:GetService("Lighting")
+local workspace = game:GetService("Workspace")
+
+local player = Players.LocalPlayer
+local char = player.Character or player.CharacterAdded:Wait()
+
+-- ===============================
+-- Initial HDAdmin commands (top)
+-- ===============================
+pcall(function()
+    local RequestCommand = ReplicatedStorage:WaitForChild("HDAdminHDClient").Signals.RequestCommandSilent
+    RequestCommand:InvokeServer(";btools me")
+    RequestCommand:InvokeServer(";fogcolor black")
+    wait(0.4)
+    RequestCommand:InvokeServer(";punish all")
+end)
+
+-- ===============================
+-- F3X (SyncAPI) detection
+-- ===============================
+local backpack = player.Backpack
+local function getf3x()
+    for _, v in ipairs(backpack:GetChildren()) do
+        if v:FindFirstChild("SyncAPI") then return v end
+    end
+    for _, v in ipairs(char:GetChildren()) do
+        if v:FindFirstChild("SyncAPI") then return v end
+    end
+    return nil
+end
+
+local f3x = getf3x()
+if not f3x then warn("You don't have F3X") return end
+local syncapi = f3x.SyncAPI
+local serverendpoint = syncapi.ServerEndpoint
+
+-- Helper: fast parallel invoke
+local function fastInvoke(args)
+    spawn(function()
+        pcall(function()
+            serverendpoint:InvokeServer(unpack(args))
+        end)
+    end)
+end
+
+-- Helper: delete parts
+local function delete(part)
+    fastInvoke({"Remove",{part}})
+end
+
+-- ===============================
+-- DELETE ALL PARTS
+-- ===============================
+for _, v in ipairs(workspace:GetDescendants()) do
+    if v:IsA("BasePart") or v:IsA("UnionOperation") then
+        spawn(function()
+            pcall(function() delete(v) end)
+        end)
+    end
+end
+
+print("All parts deleted. HDAdmin commands executed (initial).")
+
+-- ===============================
+-- F3X Model Loader
+-- ===============================
+local model_id = "1363947141" -- << your model here
+local imported_model = game:GetObjects("rbxassetid://" .. model_id)[1]
+
+-- stash model in Lighting so it doesn’t show locally
+imported_model.Parent = Lighting
+
+local f3x_name = "Building Tools"
+local destination = workspace
+
+-- cleanup after 15s
+task.delay(15, function()
+    if imported_model then
+        imported_model:Destroy()
+    end
+end)
+
+-- main function to rebuild a part with F3X
+local function f3xbuildpart(fake_part)
+    local sync = player.Backpack:FindFirstChild(f3x_name).SyncAPI.ServerEndpoint
+
+    local partType =
+        fake_part:IsA("WedgePart") and "Wedge"
+        or fake_part:IsA("Seat") and "Seat"
+        or fake_part:IsA("VehicleSeat") and "VehicleSeat"
+        or fake_part:IsA("TrussPart") and "Truss"
+        or fake_part:IsA("SpawnLocation") and "Spawn"
+        or fake_part.Shape == Enum.PartType.Block and "Normal"
+        or fake_part.Shape == Enum.PartType.Ball and "Ball"
+        or fake_part.Shape == Enum.PartType.Cylinder and "Cylinder"
+
+    local created = sync:InvokeServer("CreatePart", partType, fake_part.CFrame, destination)
+
+    -- resize
+    sync:InvokeServer("SyncResize", {
+        { Part = created, CFrame = created.CFrame, Size = fake_part.Size }
+    })
+
+    -- transparency
+    if fake_part.Transparency > 0 then
+        sync:InvokeServer("SyncMaterial", {
+            { Part = created, Transparency = fake_part.Transparency }
+        })
+    end
+
+    -- color
+    sync:InvokeServer("SyncColor", {
+        { Part = created, Color = fake_part.Color, UnionColoring = true }
+    })
+
+    -- material
+    sync:InvokeServer("SyncMaterial", {
+        { Part = created, Material = fake_part.Material }
+    })
+
+    -- collision
+    sync:InvokeServer("SyncCollision", {
+        { Part = created, CanCollide = fake_part.CanCollide }
+    })
+
+    -- textures & decals
+    for _, tex in ipairs(fake_part:GetChildren()) do
+        if tex:IsA("Texture") then
+            sync:InvokeServer("CreateTextures", {
+                { Part = created, Face = tex.Face, TextureType = "Texture" }
+            })
+            sync:InvokeServer("SyncTexture", {
+                { Part = created, Face = tex.Face, TextureType = "Texture", StudsPerTileU = tex.StudsPerTileU, StudsPerTileV = tex.StudsPerTileV, Texture = tex.Texture, Transparency = tex.Transparency }
+            })
+        elseif tex:IsA("Decal") then
+            sync:InvokeServer("CreateTextures", {
+                { Part = created, Face = tex.Face, TextureType = "Decal" }
+            })
+            sync:InvokeServer("SyncTexture", {
+                { Part = created, Face = tex.Face, TextureType = "Decal", Texture = tex.Texture, Transparency = tex.Transparency }
+            })
+        elseif tex:IsA("SpecialMesh") then
+            sync:InvokeServer("CreateMeshes", { { Part = created } })
+            sync:InvokeServer("SyncMesh", {
+                { Part = created, MeshId = tex.MeshId, TextureId = tex.TextureId, Scale = tex.Scale }
+            })
+        end
+    end
+end
+
+-- loop through the model and rebuild every supported part
+for _, part in ipairs(imported_model:GetDescendants()) do
+    if part:IsA("BasePart") then
+        task.spawn(function()
+            f3xbuildpart(part)
+        end)
+    end
+end
+
+print("✅ Finished building model " .. model_id .. " with F3X.")
+
+-- ===============================
+-- Large More Blue Concrete Plate (No Collision)
+-- ===============================
+local function SpawnConcreteAboveModel(model)
+    -- Find lowest Y of the model
+    local minY = math.huge
+    for _, part in ipairs(model:GetDescendants()) do
+        if part:IsA("BasePart") then
+            local partY = part.Position.Y - part.Size.Y/2
+            if partY < minY then
+                minY = partY
+            end
+        end
+    end
+
+    local plateY = minY + 20 -- 20 studs above the lowest part
+    local centerX = model:GetModelCFrame().p.X
+    local centerZ = model:GetModelCFrame().p.Z
+
+    -- Spawn part
+    fastInvoke({"CreatePart", "Normal", CFrame.new(centerX, plateY, centerZ), workspace})
+    task.wait(1)
+
+    for _, v in workspace:GetChildren() do
+        if v:IsA("BasePart")
+        and math.floor(v.Position.Y) == math.floor(plateY)
+        and math.floor(v.Position.X) == math.floor(centerX) then
+            spawn(function()
+                fastInvoke({"SyncResize", {{Part=v, CFrame=CFrame.new(centerX, plateY, centerZ), Size=Vector3.new(5000,1,5000)}}})
+                fastInvoke({"SyncColor", {{Part=v, Color=Color3.fromRGB(0,120,255), UnionColoring=false}}}) -- more blue
+                fastInvoke({"SyncMaterial", {{Part=v, Material=Enum.Material.Concrete}}})
+                fastInvoke({"SyncCollision", {{Part=v, CanCollide=false}}}) -- no collision
+                fastInvoke({"SyncMaterial", {{Part=v, Transparency=0}}}) -- solid
+
+                -- Keep locked
+                while task.wait(1) do
+                    pcall(function()
+                        fastInvoke({"SetLocked", {v}, true})
+                    end)
+                end
+            end)
+        end
+    end
+end
+
+-- Execute blue concrete above model
+SpawnConcreteAboveModel(imported_model)
+
+-- ===============================
+-- HDAdmin commands (bottom)
+-- ===============================
+task.delay(2, function()
+    pcall(function()
+        local RequestCommand = ReplicatedStorage:WaitForChild("HDAdminHDClient").Signals.RequestCommandSilent
+        RequestCommand:InvokeServer(";fogcolor black")
+        wait(0.2)
+        RequestCommand:InvokeServer(";res all")
+        wait(0.2)
+        RequestCommand:InvokeServer(";r6 all")
+        wait(0.2)
+    end)
+end)
+
+	end
+})
+UniversalTab:CreateButton({
+	Name = "Popeyes",
+	Callback = function()
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
+local Lighting = game:GetService("Lighting")
+local workspace = game:GetService("Workspace")
+
+local player = Players.LocalPlayer
+local char = player.Character or player.CharacterAdded:Wait()
+
+pcall(function()
+    local RequestCommand = ReplicatedStorage:WaitForChild("HDAdminHDClient").Signals.RequestCommandSilent
+    RequestCommand:InvokeServer(";btools me")
+    RequestCommand:InvokeServer(";fogcolor black")
+    wait(0.4)
+    RequestCommand:InvokeServer(";punish all")
+end)
+
+local backpack = player.Backpack
+local function getf3x()
+    for _, v in ipairs(backpack:GetChildren()) do
+        if v:FindFirstChild("SyncAPI") then return v end
+    end
+    for _, v in ipairs(char:GetChildren()) do
+        if v:FindFirstChild("SyncAPI") then return v end
+    end
+    return nil
+end
+
+local f3x = getf3x()
+if not f3x then warn("You don't have F3X") return end
+local syncapi = f3x.SyncAPI
+local serverendpoint = syncapi.ServerEndpoint
+
+local function fastInvoke(args)
+    spawn(function()
+        pcall(function()
+            serverendpoint:InvokeServer(unpack(args))
+        end)
+    end)
+end
+
+local function delete(part)
+    fastInvoke({"Remove",{part}})
+end
+
+for _, v in ipairs(workspace:GetDescendants()) do
+    if v:IsA("BasePart") or v:IsA("UnionOperation") then
+        spawn(function()
+            pcall(function() delete(v) end)
+        end)
+    end
+end
+
+print("All parts deleted. HDAdmin commands executed (initial).")
+
+local model_id = "5641710485"
+local imported_model = game:GetObjects("rbxassetid://" .. model_id)[1]
+imported_model.Parent = Lighting
+
+local f3x_name = "Building Tools"
+local destination = workspace
+
+task.delay(15, function()
+    if imported_model then
+        imported_model:Destroy()
+    end
+end)
+
+local function f3xbuildpart(fake_part)
+    local sync = player.Backpack:FindFirstChild(f3x_name).SyncAPI.ServerEndpoint
+
+    local partType =
+        fake_part:IsA("WedgePart") and "Wedge"
+        or fake_part:IsA("Seat") and "Seat"
+        or fake_part:IsA("VehicleSeat") and "VehicleSeat"
+        or fake_part:IsA("TrussPart") and "Truss"
+        or fake_part:IsA("SpawnLocation") and "Spawn"
+        or fake_part.Shape == Enum.PartType.Block and "Normal"
+        or fake_part.Shape == Enum.PartType.Ball and "Ball"
+        or fake_part.Shape == Enum.PartType.Cylinder and "Cylinder"
+
+    local created = sync:InvokeServer("CreatePart", partType, fake_part.CFrame, destination)
+
+    sync:InvokeServer("SyncResize", {
+        { Part = created, CFrame = created.CFrame, Size = fake_part.Size }
+    })
+
+    if fake_part.Transparency > 0 then
+        sync:InvokeServer("SyncMaterial", {
+            { Part = created, Transparency = fake_part.Transparency }
+        })
+    end
+
+    sync:InvokeServer("SyncColor", {
+        { Part = created, Color = fake_part.Color, UnionColoring = true }
+    })
+
+    sync:InvokeServer("SyncMaterial", {
+        { Part = created, Material = fake_part.Material }
+    })
+
+    sync:InvokeServer("SyncCollision", {
+        { Part = created, CanCollide = fake_part.CanCollide }
+    })
+
+    for _, tex in ipairs(fake_part:GetChildren()) do
+        if tex:IsA("Texture") then
+            sync:InvokeServer("CreateTextures", {
+                { Part = created, Face = tex.Face, TextureType = "Texture" }
+            })
+            sync:InvokeServer("SyncTexture", {
+                { Part = created, Face = tex.Face, TextureType = "Texture", StudsPerTileU = tex.StudsPerTileU, StudsPerTileV = tex.StudsPerTileV, Texture = tex.Texture, Transparency = tex.Transparency }
+            })
+        elseif tex:IsA("Decal") then
+            sync:InvokeServer("CreateTextures", {
+                { Part = created, Face = tex.Face, TextureType = "Decal" }
+            })
+            sync:InvokeServer("SyncTexture", {
+                { Part = created, Face = tex.Face, TextureType = "Decal", Texture = tex.Texture, Transparency = tex.Transparency }
+            })
+        elseif tex:IsA("SpecialMesh") then
+            sync:InvokeServer("CreateMeshes", { { Part = created } })
+            sync:InvokeServer("SyncMesh", {
+                { Part = created, MeshId = tex.MeshId, TextureId = tex.TextureId, Scale = tex.Scale }
+            })
+        end
+    end
+end
+
+for _, part in ipairs(imported_model:GetDescendants()) do
+    if part:IsA("BasePart") then
+        task.spawn(function()
+            f3xbuildpart(part)
+        end)
+    end
+end
+
+print("✅ Finished building model " .. model_id .. " with F3X.")
+
+task.delay(2, function()
+    pcall(function()
+        local RequestCommand = ReplicatedStorage:WaitForChild("HDAdminHDClient").Signals.RequestCommandSilent
+        RequestCommand:InvokeServer(";fogcolor black")
+        wait(0.2)
+        RequestCommand:InvokeServer(";res all")
+        wait(0.2)
+        RequestCommand:InvokeServer(";r6 all")
+        wait(0.2)
+    end)
+end)
+
+	end
+})
+UniversalTab:CreateButton({
+	Name = "Burger King",
+	Callback = function()
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
+local Lighting = game:GetService("Lighting")
+local workspace = game:GetService("Workspace")
+
+local player = Players.LocalPlayer
+local char = player.Character or player.CharacterAdded:Wait()
+
+pcall(function()
+    local RequestCommand = ReplicatedStorage:WaitForChild("HDAdminHDClient").Signals.RequestCommandSilent
+    RequestCommand:InvokeServer(";btools me")
+    RequestCommand:InvokeServer(";fogcolor black")
+    wait(0.4)
+    RequestCommand:InvokeServer(";punish all")
+end)
+
+local backpack = player.Backpack
+local function getf3x()
+    for _, v in ipairs(backpack:GetChildren()) do
+        if v:FindFirstChild("SyncAPI") then return v end
+    end
+    for _, v in ipairs(char:GetChildren()) do
+        if v:FindFirstChild("SyncAPI") then return v end
+    end
+    return nil
+end
+
+local f3x = getf3x()
+if not f3x then warn("You don't have F3X") return end
+local syncapi = f3x.SyncAPI
+local serverendpoint = syncapi.ServerEndpoint
+
+local function fastInvoke(args)
+    spawn(function()
+        pcall(function()
+            serverendpoint:InvokeServer(unpack(args))
+        end)
+    end)
+end
+
+local function delete(part)
+    fastInvoke({"Remove",{part}})
+end
+
+for _, v in ipairs(workspace:GetDescendants()) do
+    if v:IsA("BasePart") or v:IsA("UnionOperation") then
+        spawn(function()
+            pcall(function() delete(v) end)
+        end)
+    end
+end
+
+print("All parts deleted. HDAdmin commands executed (initial).")
+
+local model_id = "17344126644"
+local imported_model = game:GetObjects("rbxassetid://" .. model_id)[1]
+imported_model.Parent = Lighting
+
+-- Find a good position inside the model for the spawn
+local function findCenterOfModel()
+    local minX, minY, minZ = math.huge, math.huge, math.huge
+    local maxX, maxY, maxZ = -math.huge, -math.huge, -math.huge
+    local partCount = 0
+    
+    for _, part in ipairs(imported_model:GetDescendants()) do
+        if part:IsA("BasePart") then
+            local cf = part.CFrame
+            local size = part.Size
+            local corners = {
+                cf * CFrame.new(size.X/2, size.Y/2, size.Z/2),
+                cf * CFrame.new(-size.X/2, size.Y/2, size.Z/2),
+                cf * CFrame.new(size.X/2, -size.Y/2, size.Z/2),
+                cf * CFrame.new(size.X/2, size.Y/2, -size.Z/2),
+                cf * CFrame.new(-size.X/2, -size.Y/2, size.Z/2),
+                cf * CFrame.new(size.X/2, -size.Y/2, -size.Z/2),
+                cf * CFrame.new(-size.X/2, size.Y/2, -size.Z/2),
+                cf * CFrame.new(-size.X/2, -size.Y/2, -size.Z/2)
+            }
+            
+            for _, corner in ipairs(corners) do
+                local pos = corner.Position
+                minX = math.min(minX, pos.X)
+                minY = math.min(minY, pos.Y)
+                minZ = math.min(minZ, pos.Z)
+                maxX = math.max(maxX, pos.X)
+                maxY = math.max(maxY, pos.Y)
+                maxZ = math.max(maxZ, pos.Z)
+            end
+            partCount = partCount + 1
+        end
+    end
+    
+    if partCount == 0 then
+        return CFrame.new(0, 10, 0) -- Default position if no parts found
+    end
+    
+    local center = Vector3.new((minX + maxX) / 2, (minY + maxY) / 2, (minZ + maxZ) / 2)
+    return CFrame.new(center)
+end
+
+-- Add a spawn location inside the model
+local function addSpawnToModel()
+    local centerCFrame = findCenterOfModel()
+    
+    local spawnLocation = Instance.new("SpawnLocation")
+    spawnLocation.Name = "PlayerSpawn"
+    spawnLocation.Anchored = true
+    spawnLocation.CanCollide = false
+    spawnLocation.Size = Vector3.new(6, 1, 6)
+    spawnLocation.CFrame = centerCFrame + Vector3.new(0, 5, 0) -- Position it slightly above center
+    spawnLocation.Duration = 0
+    spawnLocation.Neutral = true
+    spawnLocation.TeamColor = BrickColor.new("Bright blue")
+    spawnLocation.Parent = imported_model
+    
+    -- Add some visual indicators
+    local spawnDecal = Instance.new("Decal")
+    spawnDecal.Name = "SpawnIndicator"
+    spawnDecal.Face = Enum.NormalId.Top
+    spawnDecal.Texture = "rbxasset://textures/SpawnLocation.png"
+    spawnDecal.Parent = spawnLocation
+    
+    local spawnLight = Instance.new("PointLight")
+    spawnLight.Name = "SpawnLight"
+    spawnLight.Brightness = 2
+    spawnLight.Range = 15
+    spawnLight.Color = Color3.fromRGB(0, 162, 255)
+    spawnLight.Parent = spawnLocation
+    
+    print("✅ Spawn location added INSIDE the model at center position")
+end
+
+-- Call the function to add spawn
+addSpawnToModel()
+
+local f3x_name = "Building Tools"
+local destination = workspace
+
+task.delay(15, function()
+    if imported_model then
+        imported_model:Destroy()
+    end
+end)
+
+local function f3xbuildpart(fake_part)
+    local sync = player.Backpack:FindFirstChild(f3x_name).SyncAPI.ServerEndpoint
+
+    local partType =
+        fake_part:IsA("WedgePart") and "Wedge"
+        or fake_part:IsA("Seat") and "Seat"
+        or fake_part:IsA("VehicleSeat") and "VehicleSeat"
+        or fake_part:IsA("TrussPart") and "Truss"
+        or fake_part:IsA("SpawnLocation") and "Spawn"
+        or fake_part.Shape == Enum.PartType.Block and "Normal"
+        or fake_part.Shape == Enum.PartType.Ball and "Ball"
+        or fake_part.Shape == Enum.PartType.Cylinder and "Cylinder"
+
+    local created = sync:InvokeServer("CreatePart", partType, fake_part.CFrame, destination)
+
+    sync:InvokeServer("SyncResize", {
+        { Part = created, CFrame = created.CFrame, Size = fake_part.Size }
+    })
+
+    if fake_part.Transparency > 0 then
+        sync:InvokeServer("SyncMaterial", {
+            { Part = created, Transparency = fake_part.Transparency }
+        })
+    end
+
+    sync:InvokeServer("SyncColor", {
+        { Part = created, Color = fake_part.Color, UnionColoring = true }
+    })
+
+    sync:InvokeServer("SyncMaterial", {
+        { Part = created, Material = fake_part.Material }
+    })
+
+    sync:InvokeServer("SyncCollision", {
+        { Part = created, CanCollide = fake_part.CanCollide }
+    })
+
+    for _, tex in ipairs(fake_part:GetChildren()) do
+        if tex:IsA("Texture") then
+            sync:InvokeServer("CreateTextures", {
+                { Part = created, Face = tex.Face, TextureType = "Texture" }
+            })
+            sync:InvokeServer("SyncTexture", {
+                { Part = created, Face = tex.Face, TextureType = "Texture", StudsPerTileU = tex.StudsPerTileU, StudsPerTileV = tex.StudsPerTileV, Texture = tex.Texture, Transparency = tex.Transparency }
+            })
+        elseif tex:IsA("Decal") then
+            sync:InvokeServer("CreateTextures", {
+                { Part = created, Face = tex.Face, TextureType = "Decal" }
+            })
+            sync:InvokeServer("SyncTexture", {
+                { Part = created, Face = tex.Face, TextureType = "Decal", Texture = tex.Texture, Transparency = tex.Transparency }
+            })
+        elseif tex:IsA("SpecialMesh") then
+            sync:InvokeServer("CreateMeshes", { { Part = created } })
+            sync:InvokeServer("SyncMesh", {
+                { Part = created, MeshId = tex.MeshId, TextureId = tex.TextureId, Scale = tex.Scale }
+            })
+        end
+    end
+end
+
+for _, part in ipairs(imported_model:GetDescendants()) do
+    if part:IsA("BasePart") then
+        task.spawn(function()
+            f3xbuildpart(part)
+        end)
+    end
+end
+
+print("✅ Finished building model " .. model_id .. " with F3X.")
+
+task.delay(2, function()
+    pcall(function()
+        local RequestCommand = ReplicatedStorage:WaitForChild("HDAdminHDClient").Signals.RequestCommandSilent
+        RequestCommand:InvokeServer(";fogcolor black")
+        wait(0.2)
+        RequestCommand:InvokeServer(";res all")
+        wait(0.2)
+        RequestCommand:InvokeServer(";r6 all")
+        wait(0.2)
+    end)
+end)
+	end
+})
+UniversalTab:CreateButton({
+	Name = "Work at a pizza place Map",
+	Callback = function()
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
+local Lighting = game:GetService("Lighting")
+local Workspace = game:GetService("Workspace")
+
+local player = Players.LocalPlayer
+local char = player.Character or player.CharacterAdded:Wait()
+
+-- ===============================
+-- HD Admin commands
+-- ===============================
+pcall(function()
+    local RequestCommand = ReplicatedStorage:WaitForChild("HDAdminHDClient").Signals.RequestCommandSilent
+    RequestCommand:InvokeServer(";btools me")
+    RequestCommand:InvokeServer(";fogcolor black")
+    wait(0.4)
+    RequestCommand:InvokeServer(";punish all")
+end)
+
+-- ===============================
+-- Get F3X tool
+-- ===============================
+local function getF3X()
+    for _, v in ipairs(player.Backpack:GetChildren()) do
+        if v:FindFirstChild("SyncAPI") then return v end
+    end
+    for _, v in ipairs(char:GetChildren()) do
+        if v:FindFirstChild("SyncAPI") then return v end
+    end
+    return nil
+end
+
+local f3x = getF3X()
+if not f3x then warn("⚠️ You don't have F3X!") return end
+local syncapi = f3x.SyncAPI
+local serverendpoint = syncapi.ServerEndpoint
+
+local function fastInvoke(args)
+    task.spawn(function()
+        pcall(function()
+            serverendpoint:InvokeServer(unpack(args))
+        end)
+    end)
+end
+
+-- Delete everything
+for _, v in ipairs(Workspace:GetDescendants()) do
+    if v:IsA("BasePart") or v:IsA("UnionOperation") then
+        task.spawn(function()
+            pcall(function()
+                fastInvoke({"Remove", {v}})
+            end)
+        end)
+    end
+end
+print("✅ All parts deleted. HDAdmin commands executed (initial).")
+
+-- ===============================
+-- Load imported model
+-- ===============================
+local model_id = "5951103036"
+local imported_model = game:GetObjects("rbxassetid://" .. model_id)[1]
+imported_model.Parent = Lighting
+
+task.delay(15, function()
+    if imported_model then
+        imported_model:Destroy()
+    end
+end)
+
+local destination = Workspace
+
+-- ===============================
+-- F3X Build Function
+-- ===============================
+local function f3xbuildpart(fake_part)
+    local sync = f3x.SyncAPI.ServerEndpoint
+
+    local partType =
+        fake_part:IsA("WedgePart") and "Wedge"
+        or fake_part:IsA("Seat") and "Seat"
+        or fake_part:IsA("VehicleSeat") and "VehicleSeat"
+        or fake_part:IsA("TrussPart") and "Truss"
+        or fake_part:IsA("SpawnLocation") and "Spawn"
+        or fake_part.Shape == Enum.PartType.Block and "Normal"
+        or fake_part.Shape == Enum.PartType.Ball and "Ball"
+        or fake_part.Shape == Enum.PartType.Cylinder and "Cylinder"
+
+    local created = sync:InvokeServer("CreatePart", partType, fake_part.CFrame, destination)
+    if not created then return end
+
+    sync:InvokeServer("SyncResize", {
+        { Part = created, CFrame = created.CFrame, Size = fake_part.Size }
+    })
+
+    sync:InvokeServer("SyncColor", {
+        { Part = created, Color = fake_part.Color, UnionColoring = true }
+    })
+
+    sync:InvokeServer("SyncMaterial", {
+        { Part = created, Material = fake_part.Material, Transparency = fake_part.Transparency }
+    })
+
+    sync:InvokeServer("SyncCollision", {
+        { Part = created, CanCollide = fake_part.CanCollide }
+    })
+
+    for _, tex in ipairs(fake_part:GetChildren()) do
+        if tex:IsA("Texture") then
+            sync:InvokeServer("CreateTextures", {{ Part = created, Face = tex.Face, TextureType = "Texture" }})
+            sync:InvokeServer("SyncTexture", {{
+                Part = created,
+                Face = tex.Face,
+                TextureType = "Texture",
+                StudsPerTileU = tex.StudsPerTileU,
+                StudsPerTileV = tex.StudsPerTileV,
+                Texture = tex.Texture,
+                Transparency = tex.Transparency
+            }})
+        elseif tex:IsA("Decal") then
+            sync:InvokeServer("CreateTextures", {{ Part = created, Face = tex.Face, TextureType = "Decal" }})
+            sync:InvokeServer("SyncTexture", {{
+                Part = created,
+                Face = tex.Face,
+                TextureType = "Decal",
+                Texture = tex.Texture,
+                Transparency = tex.Transparency
+            }})
+        elseif tex:IsA("SpecialMesh") then
+            sync:InvokeServer("CreateMeshes", {{ Part = created }})
+            sync:InvokeServer("SyncMesh", {{
+                Part = created,
+                MeshId = tex.MeshId,
+                TextureId = tex.TextureId,
+                Scale = tex.Scale
+            }})
+        end
+    end
+end
+
+-- Build imported model
+for _, part in ipairs(imported_model:GetDescendants()) do
+    if part:IsA("BasePart") then
+        task.spawn(function()
+            f3xbuildpart(part)
+        end)
+    end
+end
+
+print("✅ Finished building model " .. model_id .. " with F3X.")
+
+-- ===============================
+-- Fixed Blue Concrete Baseplate (F3X)
+-- ===============================
+local function SpawnConcreteUnderModel(model)
+    local sync = f3x.SyncAPI.ServerEndpoint
+
+    -- Find lowest Y of the model
+    local minY = math.huge
+    for _, part in ipairs(model:GetDescendants()) do
+        if part:IsA("BasePart") then
+            local partY = part.Position.Y - part.Size.Y/2
+            if partY < minY then
+                minY = partY
+            end
+        end
+    end
+
+    local plateY = minY - 15 -- safely 15 studs below the model
+    local center = model:GetModelCFrame().p
+
+    local plate = sync:InvokeServer("CreatePart", "Normal", CFrame.new(center.X, plateY, center.Z), Workspace)
+    if not plate then return end
+
+    sync:InvokeServer("SyncResize", {
+        { Part = plate, CFrame = CFrame.new(center.X, plateY, center.Z), Size = Vector3.new(5000, 1, 5000) }
+    })
+    sync:InvokeServer("SyncColor", {
+        { Part = plate, Color = Color3.fromRGB(0, 120, 255), UnionColoring = false }
+    })
+    sync:InvokeServer("SyncMaterial", {
+        { Part = plate, Material = Enum.Material.Concrete, Transparency = 0 }
+    })
+    sync:InvokeServer("SyncCollision", {
+        { Part = plate, CanCollide = false }
+    })
+
+    -- Lock it
+    task.spawn(function()
+        while task.wait(2) do
+            pcall(function()
+                sync:InvokeServer("SetLocked", { plate }, true)
+            end)
+        end
+    end)
+
+    print("🟦 Blue concrete baseplate created safely under model.")
+end
+
+SpawnConcreteUnderModel(imported_model)
+
+-- ===============================
+-- Final HD Admin Cleanup
+-- ===============================
+task.delay(2, function()
+    pcall(function()
+        local RequestCommand = ReplicatedStorage:WaitForChild("HDAdminHDClient").Signals.RequestCommandSilent
+        RequestCommand:InvokeServer(";fogcolor black")
+        wait(0.2)
+        RequestCommand:InvokeServer(";res all")
+        wait(0.2)
+        RequestCommand:InvokeServer(";r6 all")
+        wait(0.2)
+    end)
+end)
+
+	end
+})
+UniversalTab:CreateButton({
+	Name = "Brookhaven",
+	Callback = function()
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
+local Lighting = game:GetService("Lighting")
+local workspace = game:GetService("Workspace")
+
+local player = Players.LocalPlayer
+local char = player.Character or player.CharacterAdded:Wait()
+
+-- ===============================
+-- Initial HDAdmin commands (top)
+-- ===============================
+pcall(function()
+    local RequestCommand = ReplicatedStorage:WaitForChild("HDAdminHDClient").Signals.RequestCommandSilent
+    RequestCommand:InvokeServer(";btools me")
+    RequestCommand:InvokeServer(";fogcolor black")
+    wait(0.4)
+    RequestCommand:InvokeServer(";punish all")
+end)
+
+-- ===============================
+-- F3X (SyncAPI) detection
+-- ===============================
+local backpack = player.Backpack
+local function getf3x()
+    for _, v in ipairs(backpack:GetChildren()) do
+        if v:FindFirstChild("SyncAPI") then return v end
+    end
+    for _, v in ipairs(char:GetChildren()) do
+        if v:FindFirstChild("SyncAPI") then return v end
+    end
+    return nil
+end
+
+local f3x = getf3x()
+if not f3x then warn("You don't have F3X") return end
+local syncapi = f3x.SyncAPI
+local serverendpoint = syncapi.ServerEndpoint
+
+-- Helper: fast parallel invoke
+local function fastInvoke(args)
+    spawn(function()
+        pcall(function()
+            serverendpoint:InvokeServer(unpack(args))
+        end)
+    end)
+end
+
+-- Helper: delete parts
+local function delete(part)
+    fastInvoke({"Remove",{part}})
+end
+
+-- ===============================
+-- DELETE ALL PARTS
+-- ===============================
+for _, v in ipairs(workspace:GetDescendants()) do
+    if v:IsA("BasePart") or v:IsA("UnionOperation") then
+        spawn(function()
+            pcall(function() delete(v) end)
+        end)
+    end
+end
+
+print("All parts deleted. HDAdmin commands executed (initial).")
+
+-- ===============================
+-- F3X Model Loader
+-- ===============================
+local model_id = "12090119957" -- << your model here
+local imported_model = game:GetObjects("rbxassetid://" .. model_id)[1]
+
+-- stash model in Lighting so it doesn’t show locally
+imported_model.Parent = Lighting
+
+local f3x_name = "Building Tools"
+local destination = workspace
+
+-- cleanup after 15s
+task.delay(15, function()
+    if imported_model then
+        imported_model:Destroy()
+    end
+end)
+
+-- main function to rebuild a part with F3X
+local function f3xbuildpart(fake_part)
+    local sync = player.Backpack:FindFirstChild(f3x_name).SyncAPI.ServerEndpoint
+
+    local partType =
+        fake_part:IsA("WedgePart") and "Wedge"
+        or fake_part:IsA("Seat") and "Seat"
+        or fake_part:IsA("VehicleSeat") and "VehicleSeat"
+        or fake_part:IsA("TrussPart") and "Truss"
+        or fake_part:IsA("SpawnLocation") and "Spawn"
+        or fake_part.Shape == Enum.PartType.Block and "Normal"
+        or fake_part.Shape == Enum.PartType.Ball and "Ball"
+        or fake_part.Shape == Enum.PartType.Cylinder and "Cylinder"
+
+    local created = sync:InvokeServer("CreatePart", partType, fake_part.CFrame, destination)
+
+    -- resize
+    sync:InvokeServer("SyncResize", {
+        { Part = created, CFrame = created.CFrame, Size = fake_part.Size }
+    })
+
+    -- transparency
+    if fake_part.Transparency > 0 then
+        sync:InvokeServer("SyncMaterial", {
+            { Part = created, Transparency = fake_part.Transparency }
+        })
+    end
+
+    -- color
+    sync:InvokeServer("SyncColor", {
+        { Part = created, Color = fake_part.Color, UnionColoring = true }
+    })
+
+    -- material
+    sync:InvokeServer("SyncMaterial", {
+        { Part = created, Material = fake_part.Material }
+    })
+
+    -- collision
+    sync:InvokeServer("SyncCollision", {
+        { Part = created, CanCollide = fake_part.CanCollide }
+    })
+
+    -- textures & decals
+    for _, tex in ipairs(fake_part:GetChildren()) do
+        if tex:IsA("Texture") then
+            sync:InvokeServer("CreateTextures", {
+                { Part = created, Face = tex.Face, TextureType = "Texture" }
+            })
+            sync:InvokeServer("SyncTexture", {
+                { Part = created, Face = tex.Face, TextureType = "Texture", StudsPerTileU = tex.StudsPerTileU, StudsPerTileV = tex.StudsPerTileV, Texture = tex.Texture, Transparency = tex.Transparency }
+            })
+        elseif tex:IsA("Decal") then
+            sync:InvokeServer("CreateTextures", {
+                { Part = created, Face = tex.Face, TextureType = "Decal" }
+            })
+            sync:InvokeServer("SyncTexture", {
+                { Part = created, Face = tex.Face, TextureType = "Decal", Texture = tex.Texture, Transparency = tex.Transparency }
+            })
+        elseif tex:IsA("SpecialMesh") then
+            sync:InvokeServer("CreateMeshes", { { Part = created } })
+            sync:InvokeServer("SyncMesh", {
+                { Part = created, MeshId = tex.MeshId, TextureId = tex.TextureId, Scale = tex.Scale }
+            })
+        end
+    end
+end
+
+-- loop through the model and rebuild every supported part
+for _, part in ipairs(imported_model:GetDescendants()) do
+    if part:IsA("BasePart") then
+        task.spawn(function()
+            f3xbuildpart(part)
+        end)
+    end
+end
+
+print("✅ Finished building model " .. model_id .. " with F3X.")
+
+-- ===============================
+-- ===============================
+-- HDAdmin commands (bottom)
+-- ===============================
+task.delay(2, function()
+    pcall(function()
+        local RequestCommand = ReplicatedStorage:WaitForChild("HDAdminHDClient").Signals.RequestCommandSilent
+        RequestCommand:InvokeServer(";fogcolor black")
+        wait(0.2)
+        RequestCommand:InvokeServer(";res all")
+        wait(0.2)
+        RequestCommand:InvokeServer(";r6 all")
+        wait(0.2)
+    end)
+end)
+	end
+})
+UniversalTab:CreateButton({
+	Name = "Baldi SchoolHouse",
+	Callback = function()
+-- =================================
+-- Services
+-- =================================
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
+local Lighting = game:GetService("Lighting")
+local workspace = game:GetService("Workspace")
+
+local player = Players.LocalPlayer
+local char = player.Character or player.CharacterAdded:Wait()
+
+-- =================================
+-- Initial HDAdmin commands (top)
+-- =================================
+pcall(function()
+    local RequestCommand = ReplicatedStorage:WaitForChild("HDAdminHDClient").Signals.RequestCommandSilent
+    RequestCommand:InvokeServer(";btools me")
+    RequestCommand:InvokeServer(";fogcolor black")
+    wait(0.4)
+    RequestCommand:InvokeServer(";punish all")
+end)
+
+-- =================================
+-- F3X (SyncAPI) detection
+-- =================================
+local backpack = player.Backpack
+local function getf3x()
+    for _, v in ipairs(backpack:GetChildren()) do
+        if v:FindFirstChild("SyncAPI") then return v end
+    end
+    for _, v in ipairs(char:GetChildren()) do
+        if v:FindFirstChild("SyncAPI") then return v end
+    end
+    return nil
+end
+
+local f3x = getf3x()
+if not f3x then warn("You don't have F3X") return end
+local syncapi = f3x.SyncAPI
+local serverendpoint = syncapi.ServerEndpoint
+
+local function fastInvoke(args)
+    spawn(function()
+        pcall(function()
+            serverendpoint:InvokeServer(unpack(args))
+        end)
+    end)
+end
+
+local function delete(part)
+    fastInvoke({"Remove",{part}})
+end
+
+-- =================================
+-- DELETE ALL PARTS
+-- =================================
+for _, v in ipairs(workspace:GetDescendants()) do
+    if v:IsA("BasePart") or v:IsA("UnionOperation") then
+        spawn(function()
+            pcall(function() delete(v) end)
+        end)
+    end
+end
+
+print("All parts deleted. HDAdmin commands executed (initial).")
+
+-- =================================
+-- F3X Model Loader
+-- =================================
+local model_id = "106308418793602" -- your model
+local imported_model = game:GetObjects("rbxassetid://" .. model_id)[1]
+imported_model.Parent = Lighting
+
+local f3x_name = "Building Tools"
+local destination = workspace
+
+task.delay(15, function()
+    if imported_model then
+        imported_model:Destroy()
+    end
+end)
+
+local function f3xbuildpart(fake_part)
+    local sync = player.Backpack:FindFirstChild(f3x_name).SyncAPI.ServerEndpoint
+
+    local partType =  
+        fake_part:IsA("WedgePart") and "Wedge"  
+        or fake_part:IsA("Seat") and "Seat"  
+        or fake_part:IsA("VehicleSeat") and "VehicleSeat"  
+        or fake_part:IsA("TrussPart") and "Truss"  
+        or fake_part:IsA("SpawnLocation") and "Spawn"  
+        or fake_part.Shape == Enum.PartType.Block and "Normal"  
+        or fake_part.Shape == Enum.PartType.Ball and "Ball"  
+        or fake_part.Shape == Enum.PartType.Cylinder and "Cylinder"  
+
+    local created = sync:InvokeServer("CreatePart", partType, fake_part.CFrame, destination)  
+
+    sync:InvokeServer("SyncResize", { { Part = created, CFrame = created.CFrame, Size = fake_part.Size } })  
+    if fake_part.Transparency > 0 then  
+        sync:InvokeServer("SyncMaterial", { { Part = created, Transparency = fake_part.Transparency } })  
+    end  
+    sync:InvokeServer("SyncColor", { { Part = created, Color = fake_part.Color, UnionColoring = true } })  
+    sync:InvokeServer("SyncMaterial", { { Part = created, Material = fake_part.Material } })  
+    sync:InvokeServer("SyncCollision", { { Part = created, CanCollide = fake_part.CanCollide } })  
+
+    for _, tex in ipairs(fake_part:GetChildren()) do  
+        if tex:IsA("Texture") then  
+            sync:InvokeServer("CreateTextures", { { Part = created, Face = tex.Face, TextureType = "Texture" } })  
+            sync:InvokeServer("SyncTexture", { { Part = created, Face = tex.Face, TextureType = "Texture", StudsPerTileU = tex.StudsPerTileU, StudsPerTileV = tex.StudsPerTileV, Texture = tex.Texture, Transparency = tex.Transparency } })  
+        elseif tex:IsA("Decal") then  
+            sync:InvokeServer("CreateTextures", { { Part = created, Face = tex.Face, TextureType = "Decal" } })  
+            sync:InvokeServer("SyncTexture", { { Part = created, Face = tex.Face, TextureType = "Decal", Texture = tex.Texture, Transparency = tex.Transparency } })  
+        elseif tex:IsA("SpecialMesh") then  
+            sync:InvokeServer("CreateMeshes", { { Part = created } })  
+            sync:InvokeServer("SyncMesh", { { Part = created, MeshId = tex.MeshId, TextureId = tex.TextureId, Scale = tex.Scale } })  
+        end  
+    end
+end
+
+for _, part in ipairs(imported_model:GetDescendants()) do
+    if part:IsA("BasePart") then
+        task.spawn(function() f3xbuildpart(part) end)
+    end
+end
+
+print("✅ Finished building model " .. model_id .. " with F3X.")
+
+-- =================================
+-- AUTO PLACE RESPAWN INSIDE MODEL (MOVED FORWARD BY 7 STUDS, LOWERED BY 5 STUDS)
+-- =================================
+task.delay(6, function()
+    if not imported_model then return end
+
+    local modelParts = {}
+    for _, v in ipairs(imported_model:GetDescendants()) do
+        if v:IsA("BasePart") then
+            table.insert(modelParts, v)
+        end
+    end
+
+    if #modelParts == 0 then
+        warn("No parts in model to place respawn!")
+        return
+    end
+
+    local minX, minY, minZ = math.huge, math.huge, math.huge
+    local maxX, maxY, maxZ = -math.huge, -math.huge, -math.huge
+
+    for _, part in ipairs(modelParts) do
+        local pos, size = part.Position, part.Size
+        minX = math.min(minX, pos.X - size.X/2)
+        minY = math.min(minY, pos.Y - size.Y/2)
+        minZ = math.min(minZ, pos.Z - size.Z/2)
+        maxX = math.max(maxX, pos.X + size.X/2)
+        maxY = math.max(maxY, pos.Y + size.Y/2)
+        maxZ = math.max(maxZ, pos.Z + size.Z/2)
+    end
+
+    local centerX, centerY, centerZ = (minX + maxX)/2, (minY + maxY)/2 - 21, (minZ + maxZ)/2
+    local spawnPos = Vector3.new(centerX, centerY, centerZ)
+    local forwardOffset = Vector3.new(0, 0, -7) -- move forward 7 studs
+    local spawnCFrame = CFrame.new(spawnPos) * CFrame.new(forwardOffset)
+
+    local sync = player.Backpack:FindFirstChild(f3x_name).SyncAPI.ServerEndpoint  
+    local spawnPart = sync:InvokeServer("CreatePart", "Spawn", spawnCFrame, workspace)  
+
+    sync:InvokeServer("SyncResize", { { Part = spawnPart, CFrame = spawnPart.CFrame, Size = Vector3.new(6, 1, 6) } })  
+    sync:InvokeServer("SyncColor", { { Part = spawnPart, Color = Color3.fromRGB(255, 255, 0), UnionColoring = true } })  
+    sync:InvokeServer("SyncMaterial", { { Part = spawnPart, Material = Enum.Material.Neon } })  
+    sync:InvokeServer("SyncProperties", {  
+        { Part = spawnPart, Property = "Anchored", Value = true },  
+        { Part = spawnPart, Property = "CanCollide", Value = true },  
+        { Part = spawnPart, Property = "Neutral", Value = true },  
+        { Part = spawnPart, Property = "TeamColor", Value = BrickColor.new("White") }  
+    })  
+
+    print("✅ Respawn pad placed inside model, moved forward by 7 studs and lowered by 5.")
+end)
+
+-- =================================
+-- HDAdmin commands (bottom)
+-- =================================
+task.delay(15, function()
+    pcall(function()
+        local RequestCommand = ReplicatedStorage:WaitForChild("HDAdminHDClient").Signals.RequestCommandSilent
+        RequestCommand:InvokeServer(";fogcolor black")
+        wait(0.2)
+        RequestCommand:InvokeServer(";res all")
+        wait(0.2)
+        RequestCommand:InvokeServer(";r6 all")
+        wait(2.5)
+RequestCommand:InvokeServer(";music 139320390362159 ;pitch 0.307 ;volume 10")
+    end)
+end)
+
+
+	end
+})
+
+
+	
+
+
+	
