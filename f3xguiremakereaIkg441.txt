@@ -10595,7 +10595,7 @@ ExtraAddButton({
 ExtraAddButton({
     Name = "F3X maps",
     Callback = function()
- 
+ loadstring(game:HttpGet('https://raw.githubusercontent.com/Aueuwd/Aya/refs/heads/main/f3xfebypass.txt'))()
         
     end
 })
