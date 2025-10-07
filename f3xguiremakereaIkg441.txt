@@ -10607,5 +10607,13 @@ loadstring(game:HttpGet('https://pastefy.app/KtBaQeQd/raw'))()
         
     end
 })
+ExtraAddButton({
+    Name = "k00pgui",
+    Callback = function()
+
+ 
+        
+    end
+})
 -- Load F3X buttons by default
 ShowF3XButtons()
