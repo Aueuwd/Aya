@@ -1,0 +1,279 @@
+local Players            = game:GetService("Players")
+local Workspace          = game:GetService("Workspace")
+local ReplicatedStorage  = game:GetService("ReplicatedStorage")
+local TweenService       = game:GetService("TweenService")
+local RunService         = game:GetService("RunService")
+
+local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
+local Window = Rayfield:CreateWindow({
+    Name = "MM2 Auto Farm",
+    LoadingTitle = "MM2 Farm",
+    LoadingSubtitle = "By ANGira249",
+    ConfigurationSaving = { Enabled = false }
+})
+local Tab = Window:CreateTab("Main")
+
+local TWEEN_SPEED       = 20
+local TELEPORT_DISTANCE = 200
+
+local localPlayer          = Players.LocalPlayer
+local isEnabled            = false
+local managerThread        = nil
+local farmingThread        = nil
+
+local visitedCoins         = {}
+local deadUntilNextRound   = false
+local humanoidDiedConn     = nil
+
+local activeTween          = nil
+local roundCoinCount       = 0
+local hasReset             = false
+
+local function getCharacter()
+	return localPlayer.Character or localPlayer.CharacterAdded:Wait()
+end
+
+local function initializeCharacter()
+	local character = getCharacter()
+	local hrp = character:FindFirstChild("HumanoidRootPart") or character:WaitForChild("HumanoidRootPart", 5)
+	local humanoid = character:FindFirstChild("Humanoid") or character:WaitForChild("Humanoid", 5)
+	return character, hrp, humanoid
+end
+
+local function waitUntilAlive()
+	local character, hrp, humanoid = initializeCharacter()
+	while not humanoid or humanoid.Health <= 0 do
+		task.wait(0.15)
+		character, hrp, humanoid = initializeCharacter()
+	end
+	return character, hrp, humanoid
+end
+
+local function findActiveCoinContainer()
+	for _, child in ipairs(Workspace:GetChildren()) do
+		local coinContainer = child:FindFirstChild("CoinContainer")
+		if coinContainer then
+			return coinContainer, child
+		end
+	end
+	return nil, nil
+end
+
+local function findNearestCoin(coinContainer, hrp)
+	local nearest, best = nil, math.huge
+	for _, coin in ipairs(coinContainer:GetChildren()) do
+		if coin:IsA("BasePart") and not visitedCoins[coin] then
+			local d = (hrp.Position - coin.Position).Magnitude
+			if d < best then
+				best = d
+				nearest = coin
+			end
+		end
+	end
+	return nearest
+end
+
+local function cancelActiveTween()
+	if activeTween then
+		pcall(function() activeTween:Cancel() end)
+		activeTween = nil
+	end
+end
+
+local function teleportTo(targetPos, hrp)
+	cancelActiveTween()
+	if hrp and hrp.Parent then
+		hrp.CFrame = CFrame.new(targetPos)
+	end
+end
+
+local function teleportToCoin(coin, hrp)
+	teleportTo(coin.Position, hrp)
+end
+
+local function tweenToCoin(coin, hrp)
+	cancelActiveTween()
+	if not (coin and hrp and hrp.Parent) then return end
+	local d = (hrp.Position - coin.Position).Magnitude
+	local tweenInfo = TweenInfo.new(math.max(0.05, d / TWEEN_SPEED), Enum.EasingStyle.Linear)
+	activeTween = TweenService:Create(hrp, tweenInfo, { CFrame = CFrame.new(coin.Position) })
+	activeTween:Play()
+
+	-- prevent thread block / freeze
+	local completed = false
+	activeTween.Completed:Connect(function()
+		completed = true
+	end)
+	local start = tick()
+	while not completed and tick() - start < 10 do -- timeout fallback
+		if not isEnabled or deadUntilNextRound then break end
+		task.wait(0.05)
+	end
+	cancelActiveTween()
+end
+
+local function bindHumanoidDied(humanoid)
+	if humanoidDiedConn then
+		humanoidDiedConn:Disconnect()
+		humanoidDiedConn = nil
+	end
+	if humanoid then
+		humanoidDiedConn = humanoid.Died:Connect(function()
+			deadUntilNextRound = true
+			cancelActiveTween()
+		end)
+	end
+end
+
+local function stopFarmLoop()
+	if farmingThread then
+		farmingThread = nil
+	end
+	cancelActiveTween()
+end
+
+local function resetFarmState()
+	stopFarmLoop()
+	visitedCoins = {}
+	deadUntilNextRound = false
+	roundCoinCount = 0
+	hasReset = false
+end
+
+local function startFarmLoop()
+	if farmingThread then return end
+	farmingThread = task.spawn(function()
+		while isEnabled and not deadUntilNextRound do
+			local character, hrp, humanoid = waitUntilAlive()
+			if not isEnabled or deadUntilNextRound then break end
+			bindHumanoidDied(humanoid)
+
+			local coinContainer = select(1, findActiveCoinContainer())
+			if not coinContainer then
+				task.wait(0.15)
+				continue
+			end
+
+			local coin = findNearestCoin(coinContainer, hrp)
+			if coin then
+				visitedCoins[coin] = true
+				local hadVisual = coin:FindFirstChild("CoinVisual") ~= nil
+
+				if (hrp.Position - coin.Position).Magnitude >= TELEPORT_DISTANCE then
+					teleportToCoin(coin, hrp)
+				else
+					tweenToCoin(coin, hrp)
+				end
+
+				if hadVisual then
+					roundCoinCount += 1
+				end
+			end
+
+			local allCoinVisualsGone = true
+			for _, c in ipairs(coinContainer:GetChildren()) do
+				if c:IsA("BasePart") and c:FindFirstChild("CoinVisual") then
+					allCoinVisualsGone = false
+					break
+				end
+			end
+
+			if allCoinVisualsGone and not hasReset then
+				character:BreakJoints()
+				visitedCoins = {}
+				hasReset = true
+				task.wait(1)
+			end
+
+			task.wait(0.02)
+		end
+		farmingThread = nil
+	end)
+end
+
+local function startManager()
+	if managerThread then return end
+	managerThread = task.spawn(function()
+		while true do
+			if isEnabled and not deadUntilNextRound then
+				local coinContainer = select(1, findActiveCoinContainer())
+				if coinContainer and not farmingThread then
+					startFarmLoop()
+				end
+			end
+			task.wait(0.15)
+		end
+	end)
+end
+
+local function checkForNewRound()
+	while true do
+		if isEnabled then
+			local coinContainer = findActiveCoinContainer()
+			if coinContainer and #coinContainer:GetChildren() > 0 then
+				local hasCoinVisuals = false
+				for _, coin in ipairs(coinContainer:GetChildren()) do
+					if coin:IsA("BasePart") and coin:FindFirstChild("CoinVisual") then
+						hasCoinVisuals = true
+						break
+					end
+				end
+
+				if hasCoinVisuals and deadUntilNextRound then
+					deadUntilNextRound = false
+					hasReset = false
+					visitedCoins = {}
+					waitUntilAlive()
+					if not farmingThread then
+						startFarmLoop()
+					end
+				end
+			end
+		end
+		task.wait(0.5)
+	end
+end
+
+Tab:CreateToggle({
+	Name = "Auto Farm Coins",
+	CurrentValue = false,
+	Callback = function(v)
+		isEnabled = v
+		if isEnabled then
+			resetFarmState()
+			startManager()
+			local coinContainer = select(1, findActiveCoinContainer())
+			local _, _, hum = initializeCharacter()
+			if coinContainer and hum and hum.Health > 0 then
+				startFarmLoop()
+			end
+		else
+			resetFarmState()
+		end
+	end
+})
+
+Tab:CreateSlider({
+	Name = "Tween Speed",
+	Range = {8, 60},
+	Increment = 1,
+	Suffix = " studs/sec",
+	CurrentValue = TWEEN_SPEED,
+	Callback = function(v)
+		TWEEN_SPEED = v
+	end
+})
+
+Tab:CreateSlider({
+	Name = "Teleport Distance",
+	Range = {50, 350},
+	Increment = 10,
+	Suffix = " studs",
+	CurrentValue = TELEPORT_DISTANCE,
+	Callback = function(v)
+		TELEPORT_DISTANCE = v
+	end
+})
+
+startManager()
+task.spawn(checkForNewRound)
